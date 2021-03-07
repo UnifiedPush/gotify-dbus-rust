@@ -1,14 +1,30 @@
 [package]
-name = "dbus_distributor"
+name = "unifiedpush_gotify"
 version = "0.1.0"
 authors = ["vurpo <vurpo@vurpo.fi>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "unifiedpush_gotify_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "unifiedpush_gotify"
+path = "src/main.rs"
 
 [dependencies]
 zbus = "2.0.0-beta.2"
-zvariant = ""
+zvariant = "*"
 lazy_static = "1.4.0"
-tide = "0.16.0"
-tokio = { version = "1.2.0", features = ["rt-multi-thread"] }
+directories-next = "2.0.0"
+rpassword = "5.0"
+clap = "3.0.0-beta.2"
+reqwest = { version = "0.11.1", features = ["json", "blocking"] }
+serde = "1.0.123"
+serde_json = "1.0.59"
+url = "*"
+r2d2_sqlite = "0.17.0"
+r2d2 = "0.8.9"
+futures-util = "*"
+tokio = { version = "1.2.0", features = ["full"] }
+tokio-tungstenite = { version = "0.14.0", features = ["rustls-tls"] }
