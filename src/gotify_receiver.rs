@@ -57,7 +57,6 @@ async fn check_removed_apps(
     login_file: LoginFile) {
     let client = reqwest::Client::new();
     loop {
-        eprintln!("Checking for removed apps from Gotify");
         let response = client.get(format!("{}/application", &login_file.gotify_base_url).as_str())
             .header("X-Gotify-Key", &login_file.gotify_device_token)
             .send().await;
@@ -88,10 +87,11 @@ fn update_last_seen(pool: &r2d2::Pool<SqliteConnectionManager>, message_id: i32)
     }
 }
 
+/// Returns whether or not the message was a UP push message that we handled.
 async fn handle_message(
     pool: &r2d2::Pool<SqliteConnectionManager>,
     dbus_connection: &'static zbus::azync::Connection,
-    message: GotifyMessage) {
+    message: GotifyMessage) -> bool {
     if let Ok(conn) = pool.get().map_err(|_|()) {
         if let Ok(row) = conn.query_row(
                 "SELECT * FROM connections WHERE gotify_id = ?",
@@ -99,9 +99,21 @@ async fn handle_message(
                 |r| Ok((r.get_unwrap::<_, String>("appid"), r.get_unwrap::<_, String>("token")))
         ).map_err(|_|()) {
             send_push(dbus_connection, &row.0, &row.1, &message.message).await;
-            update_last_seen(pool, message.id);
+            true
         }
+        update_last_seen(pool, message.id);
     }
+    false
+}
+
+async fn delete_message(
+    message_id: i32,
+    login_file: &LoginFile
+) {
+    let client = reqwest::Client::new();
+    client.delete(format!("{}/message/{}", login_file.gotify_base_url, message_id).as_str())
+        .header("X-Gotify-Key", &login_file.gotify_device_token)
+        .send().await;
 }
 
 async fn check_for_missed_messages(
@@ -115,10 +127,14 @@ async fn check_for_missed_messages(
             .header("X-Gotify-Key", &login_file.gotify_device_token)
             .send().await;
         if let Ok(r) = response.and_then(|r| Ok(r.json::<GotifyMessagesList>())) {
-            if let Ok(messages) = r.await {
+            if let Ok(mut messages) = r.await {
+                messages.messages.sort_by_key(|m| m.id);
                 for message in messages.messages {
                     if message.id > last_seen_message {
-                        handle_message(pool, dbus_connection, message).await;
+                        let id = message.id;
+                        if handle_message(pool, dbus_connection, message).await {
+                            delete_message(id, &login_file).await;
+                        }
                     }
                 }
             }
@@ -156,7 +172,10 @@ pub async fn run(
             while let Ok(message) = tokio::time::timeout(std::time::Duration::from_secs(50), ws_stream.next()).await {
                 if let Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text))) = message {
                     if let Ok(message) = serde_json::from_str::<GotifyMessage>(&text) {
-                        handle_message(&sqlite_pool, dbus_connection, message).await;
+                        let id = message.id;
+                        if handle_message(&sqlite_pool, dbus_connection, message).await {
+                            delete_message(id, &login_file).await;
+                        }
                     }
                 }
             }
