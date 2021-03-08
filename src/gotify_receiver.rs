@@ -99,11 +99,15 @@ async fn handle_message(
                 |r| Ok((r.get_unwrap::<_, String>("appid"), r.get_unwrap::<_, String>("token")))
         ).map_err(|_|()) {
             send_push(dbus_connection, &row.0, &row.1, &message.message).await;
+            update_last_seen(pool, message.id);
             true
+        } else {
+            update_last_seen(pool, message.id);
+            false
         }
-        update_last_seen(pool, message.id);
+    } else {
+        false
     }
-    false
 }
 
 async fn delete_message(
