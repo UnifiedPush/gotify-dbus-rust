@@ -49,7 +49,7 @@ fn main() -> Result<(), Error> {
     let sqlite_pool = Arc::new(r2d2::Pool::new(sqlite_connection_manager)?);
 
     sqlite_pool.get()?
-        .execute("CREATE TABLE IF NOT EXISTS connections (appid STRING NOT NULL, token STRING NOT NULL, gotify_token STRING NOT NULL, gotify_id INTEGER NOT NULL)", params![])?;
+        .execute("CREATE TABLE IF NOT EXISTS connections (appid TEXT NOT NULL, token TEXT NOT NULL, gotify_token TEXT NOT NULL, gotify_id INTEGER NOT NULL)", params![])?;
 
     sqlite_pool.get()?
         .execute("CREATE TABLE IF NOT EXISTS last_seen_message (message_id INTEGER NOT NULL)", params![])?;

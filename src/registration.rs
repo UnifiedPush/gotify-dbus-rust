@@ -57,7 +57,7 @@ impl Distributor {
                     // Try writing to sqlite database
                     if let Ok(_) = self.sqlite_pool.get()
                         .map(|c| c.execute("INSERT INTO connections (appid, token, gotify_token, gotify_id) VALUES (?, ?, ?, ?)", params![appid, token, response.token, response.id])) {
-                        eprintln!("REGISTER {}", appid);
+                        eprintln!("Register new app {}", appid);
                         send_new_endpoint(self.dbus_conn, appid, token, format!("{}/UP?token={}", self.gotify_login.gotify_base_url, response.token).as_str());
                         (
                             "NEW_ENDPOINT".to_string(),
