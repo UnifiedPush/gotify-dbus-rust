@@ -10,6 +10,7 @@ use r2d2_sqlite::rusqlite::params;
 use futures_util::stream::StreamExt;
 use url::Url;
 use serde::Deserialize;
+use log::{error, warn, info, debug, trace};
 
 #[derive(Deserialize, Debug)]
 struct GotifyMessage {
@@ -162,7 +163,7 @@ pub async fn run(
         ws_url
     };
 
-    eprintln!("{}", websocket_url);
+    debug!("Gotify websocket URL: {}", websocket_url);
 
     let sqlite_pool_ = sqlite_pool.clone();
     tokio::spawn(check_removed_apps(sqlite_pool_, dbus_connection, login_file.clone()));
@@ -171,7 +172,7 @@ pub async fn run(
         check_for_missed_messages(&sqlite_pool, dbus_connection, login_file.clone()).await;
 
         if let Ok((mut ws_stream, _)) = tokio_tungstenite::connect_async(&websocket_url).await {
-            eprintln!("Connected to Gotify");
+            info!("Connected to Gotify");
             
             while let Ok(message) = tokio::time::timeout(std::time::Duration::from_secs(50), ws_stream.next()).await {
                 if let Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text))) = message {
@@ -183,10 +184,10 @@ pub async fn run(
                     }
                 }
             }
-            eprintln!("Timed out!");
+            info!("Timed out!");
             ws_stream.close(None).await;
         } else {
-            eprintln!("Failed to connect to Gotify! Retrying in 10 seconds");
+            info!("Failed to connect to Gotify! Retrying in 10 seconds");
             tokio::time::sleep(std::time::Duration::from_secs(10)).await;
         }
     }

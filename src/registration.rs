@@ -11,6 +11,7 @@ use zbus::Connection;
 use zbus::{dbus_interface, fdo};
 use serde_json::json;
 use r2d2_sqlite::rusqlite::params;
+use log::{error, warn, info, debug, trace};
 
 struct Distributor {
     dbus_conn: &'static Connection,
@@ -19,13 +20,16 @@ struct Distributor {
 }
 
 fn send_new_endpoint(conn: &zbus::Connection, appid: &str, token: &str, endpoint: &str) {
-    conn.send_message(zbus::Message::method(
+    let result = conn.send_message(zbus::Message::method(
         Some("org.unifiedpush.Distributor.gotify"), 
         Some(appid),
         "/org/unifiedpush/Connector",
         Some("org.unifiedpush.Connector1"),
         "NewEndpoint",
         &(token, endpoint)).unwrap());
+    if let Err(e) = result {
+        error!("Failed to send new endpoint: {:?}", e);
+    }
 }
 
 
@@ -57,14 +61,14 @@ impl Distributor {
                     // Try writing to sqlite database
                     if let Ok(_) = self.sqlite_pool.get()
                         .map(|c| c.execute("INSERT INTO connections (appid, token, gotify_token, gotify_id) VALUES (?, ?, ?, ?)", params![appid, token, response.token, response.id])) {
-                        eprintln!("Register new app {}", appid);
+                        info!("Register new app {}", appid);
                         send_new_endpoint(self.dbus_conn, appid, token, format!("{}/UP?token={}", self.gotify_login.gotify_base_url, response.token).as_str());
                         (
                             "NEW_ENDPOINT".to_string(),
                             String::new()
                         )
                     } else {
-                        eprintln!("Writing to sqlite database failed!");
+                        error!("Writing to sqlite database failed!");
                         // Delete the newly added connection from Gotify, because writing to sqlite failed
                         client.delete(format!("{}/application/{}", self.gotify_login.gotify_base_url, response.id).as_str())
                             .header("X-Gotify-Key", &self.gotify_login.gotify_device_token)
@@ -113,8 +117,6 @@ pub fn run(
     )?;
 
     let mut object_server = zbus::ObjectServer::new(&dbus_conn);
-
-
 
     let r = Distributor {
         dbus_conn: dbus_conn,

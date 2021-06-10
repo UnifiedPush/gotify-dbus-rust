@@ -4,4 +4,4 @@ This is a (WIP) Gotify distributor for [UnifiedPush](https://unifiedpush.org/), 
 
 To login, run the `gotify_login` binary with the command line options `--url https://yourgotifyserver.tld --username yourusername`, and type in your password when asked.
 
-To run the daemon, run the `gotify_receiver` binary without any command line arguments.
+To run the daemon, run the `unifiedpush_gotify` binary without any command line arguments.
