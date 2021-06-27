@@ -125,7 +125,7 @@ async fn check_for_missed_messages(
     pool: &r2d2::Pool<SqliteConnectionManager>,
     dbus_connection: &'static zbus::azync::Connection,
     login_file: LoginFile) {
-    eprintln!("Checking for missed messages");
+    info!("Checking for missed messages");
     if let Some(last_seen_message) = pool.get().ok().and_then(|c| c.query_row("SELECT message_id FROM last_seen_message", params![], |r| r.get::<_, i32>(0)).ok()) {
         let client = reqwest::Client::new();
         let response = client.get(format!("{}/message", &login_file.gotify_base_url).as_str())
@@ -174,17 +174,23 @@ pub async fn run(
         if let Ok((mut ws_stream, _)) = tokio_tungstenite::connect_async(&websocket_url).await {
             info!("Connected to Gotify");
             
-            while let Ok(message) = tokio::time::timeout(std::time::Duration::from_secs(50), ws_stream.next()).await {
-                if let Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text))) = message {
-                    if let Ok(message) = serde_json::from_str::<GotifyMessage>(&text) {
-                        let id = message.id;
-                        if handle_message(&sqlite_pool, dbus_connection, message).await {
-                            delete_message(id, &login_file).await;
+            loop {
+                let message = tokio::time::timeout(std::time::Duration::from_secs(50), ws_stream.next()).await;
+                if let Ok(message) = message {
+                    if let Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text))) = message {
+                        if let Ok(message) = serde_json::from_str::<GotifyMessage>(&text) {
+                            let id = message.id;
+                            if handle_message(&sqlite_pool, dbus_connection, message).await {
+                                delete_message(id, &login_file).await;
+                            }
                         }
                     }
+                } else {
+                    warn!("Websocket error: {:?}", message);
+                    break;
                 }
             }
-            info!("Timed out!");
+            info!("Timed out or connection error!");
             ws_stream.close(None).await;
         } else {
             info!("Failed to connect to Gotify! Retrying in 10 seconds");
