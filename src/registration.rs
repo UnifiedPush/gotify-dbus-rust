@@ -108,6 +108,21 @@ impl Distributor {
                 client.delete(format!("{}/application/{}", self.gotify_login.gotify_base_url, row.gotify_id).as_str())
                     .header("X-Gotify-Key", &self.gotify_login.gotify_device_token)
                     .send();
+                if let Ok(_) = self.dbus_conn.send_message(
+                    zbus::Message::method(
+                        Some("org.unifiedpush.Distributor.gotify"),
+                        Some(&row.appid),
+                        "/org/unifiedpush/Connector",
+                        Some("org.unifiedpush.Connector1"),
+                        "Unregistered",
+                        &row.token,
+                    )
+                    .unwrap(),
+                ) {
+                    eprintln!("Unregistered from Gotify: {}", &row.appid);
+                } else {
+                    eprintln!("Sending Unregister failed: {}", &row.appid);
+                }
             }
             self.sqlite_pool.get().map_err(|_|())
                 .and_then(|c| c.execute("DELETE FROM connections WHERE token=?", &[token]).map_err(|_|()));

@@ -44,7 +44,7 @@ async fn send_unregister(conn: &zbus::azync::Connection, appid: &str, token: &st
         Some(appid),
         "/org/unifiedpush/Connector",
         Some("org.unifiedpush.Connector1"),
-        "Unregister",
+        "Unregistered",
         &(token)).unwrap()).await {
         eprintln!("Unregistered from Gotify: {}", appid);
     } else {
