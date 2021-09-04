@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-
 use std::error::Error as StdError;
 use std::sync::Arc;
 use std::fs::File;
@@ -8,7 +6,7 @@ use lazy_static::lazy_static;
 use directories_next::ProjectDirs;
 use r2d2_sqlite::SqliteConnectionManager;
 use r2d2_sqlite::rusqlite::params;
-use log::{error, warn, info, debug, trace};
+use log::{info, debug};
 
 mod registration;
 mod gotify_receiver;

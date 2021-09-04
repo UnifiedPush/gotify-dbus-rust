@@ -11,7 +11,7 @@ use zbus::Connection;
 use zbus::{dbus_interface, fdo};
 use serde_json::json;
 use r2d2_sqlite::rusqlite::params;
-use log::{error, warn, info, debug, trace};
+use log::{error, info, debug};
 
 struct Distributor {
     dbus_conn: &'static Connection,

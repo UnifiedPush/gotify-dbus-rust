@@ -10,7 +10,7 @@ use r2d2_sqlite::rusqlite::params;
 use futures_util::stream::StreamExt;
 use url::Url;
 use serde::Deserialize;
-use log::{error, warn, info, debug, trace};
+use log::{warn, info, debug};
 
 #[derive(Deserialize, Debug)]
 struct GotifyMessage {

@@ -1,5 +1,4 @@
 use serde::{ Serialize, Deserialize };
-use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 use r2d2_sqlite::rusqlite::params;
 
